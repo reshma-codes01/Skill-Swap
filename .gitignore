@@ -1,0 +1,14 @@
+# Node Modules (Bohot bhari hote hain, Git par nahi dalne chahiye)
+node_modules/
+
+# Environment Variables (Sikret hain, hamesha local rehne chahiye)
+.env
+
+# Logs and Debugging Files
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# System Files (Mac/Windows ka kachra)
+.DS_Store
+Thumbs.db
