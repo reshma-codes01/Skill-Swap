@@ -4,9 +4,14 @@ import { Search } from 'lucide-react';
 
 const categories = ['All', 'Coding', 'Design', 'Music', 'Languages', 'Fitness', 'Photography', 'Math', 'Writing', 'Finance'];
 
-export default function SearchBar() {
-  const [activeCategory, setActiveCategory] = useState('All');
-
+export default function SearchBar({ 
+  searchQuery, 
+  onSearchChange, 
+  activeCategory, 
+  onCategoryChange,
+  sortOrder,
+  onSortChange 
+}) {
   return (
     <section className="pt-2 pb-12 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto relative z-10 w-full">
       {/* Search Input */}
@@ -16,6 +21,8 @@ export default function SearchBar() {
         </div>
         <input
           type="text"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
           className="block w-full pl-14 pr-6 py-4 md:py-5 bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/40 shadow-xl shadow-zinc-200/50 dark:shadow-[0_10px_40px_rgba(0,0,0,0.3)] transition-all text-lg peer"
           placeholder="What skill do you want to learn today?"
         />
@@ -29,13 +36,13 @@ export default function SearchBar() {
         <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-zinc-50 dark:from-zinc-950 to-transparent z-10 pointer-events-none"></div>
         <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-zinc-50 dark:from-zinc-950 to-transparent z-10 pointer-events-none"></div>
         
-        <div className="flex space-x-3 overflow-x-auto pb-4 pt-2 px-4 scrollbar-hide snap-x">
+        <div className="flex space-x-3 overflow-x-auto pb-4 pt-2 px-4 scrollbar-hide snap-x flex-1">
           {categories.map((category) => {
             const isActive = activeCategory === category;
             return (
               <motion.button
                 key={category}
-                onClick={() => setActiveCategory(category)}
+                onClick={() => onCategoryChange(category)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className={`flex-shrink-0 px-6 py-2.5 rounded-full text-sm font-semibold transition-all shadow-sm snap-start ${
@@ -49,6 +56,32 @@ export default function SearchBar() {
             );
           })}
         </div>
+
+        {/* Sort Dropdown */ }
+        <div className="flex-shrink-0 z-20 self-center hidden md:flex items-center gap-2 mr-4 ml-2">
+          <span className="text-sm font-semibold text-zinc-500">Sort by:</span>
+          <select 
+            value={sortOrder}
+            onChange={(e) => onSortChange(e.target.value)}
+            className="bg-white/80 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-full px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer backdrop-blur-md"
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Mobile Sort Dropdown */ }
+      <div className="mt-4 flex md:hidden items-center justify-between px-2">
+          <span className="text-sm font-semibold text-zinc-500">Sort by:</span>
+          <select 
+            value={sortOrder}
+            onChange={(e) => onSortChange(e.target.value)}
+            className="bg-white/80 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-full px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer backdrop-blur-md"
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+          </select>
       </div>
     </section>
   );

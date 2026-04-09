@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Zap, Sun, Moon, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +11,17 @@ const navLinks = [
 
 export default function Navbar({ onLoginClick, onCreateClick }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  // Dynamic user display
+  const userName = user?.name || 'User';
+  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=6366f1&color=fff&size=100`;
   
   // Theme state
   const [isDark, setIsDark] = useState(() => {
@@ -87,12 +97,12 @@ export default function Navbar({ onLoginClick, onCreateClick }) {
                 
                 <Link to="/profile" className="flex items-center justify-center outline-none group ml-2">
                   <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-zinc-200 dark:border-zinc-800 group-hover:border-indigo-500 dark:group-hover:border-indigo-400 shadow-sm transition-all focus:ring-2 focus:ring-indigo-500">
-                     <img src="https://ui-avatars.com/api/?name=Jitender+Kumar&background=6366f1&color=fff&size=100" alt="Profile" className="w-full h-full object-cover" />
+                     <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
                   </div>
                 </Link>
                 <div className="h-5 w-px bg-zinc-300 dark:bg-zinc-700 mx-1"></div>
                 <button
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="px-2 py-2 text-sm font-semibold text-zinc-500 dark:text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors focus:outline-none"
                 >
                   Sign Out
@@ -158,10 +168,10 @@ export default function Navbar({ onLoginClick, onCreateClick }) {
                       className="w-full flex items-center gap-3 px-4 py-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors border border-zinc-200 dark:border-zinc-800 shadow-sm outline-none focus:ring-2 focus:ring-indigo-500"
                     >
                       <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                        <img src="https://ui-avatars.com/api/?name=Jitender+Kumar&background=6366f1&color=fff&size=100" alt="Avatar" className="w-full h-full object-cover" />
+                        <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex flex-col text-left">
-                        <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">Jitender Kumar</span>
+                        <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">{userName}</span>
                         <span className="text-zinc-500 text-xs font-semibold">View Profile</span>
                       </div>
                     </Link>
@@ -172,7 +182,7 @@ export default function Navbar({ onLoginClick, onCreateClick }) {
                       <Plus size={18} strokeWidth={3} /> Post a Skill
                     </button>
                     <button 
-                      onClick={() => { logout(); setIsOpen(false); }}
+                      onClick={() => { handleLogout(); setIsOpen(false); }}
                       className="w-full px-5 py-3 text-base font-semibold rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-900 focus:outline-none"
                     >
                       Sign Out

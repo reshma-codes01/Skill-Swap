@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Lock, User as UserIcon } from 'lucide-react';
+import { X, Mail, Lock, User as UserIcon, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
@@ -10,20 +11,11 @@ const formVariants = {
   exit: { opacity: 0, x: 20, transition: { duration: 0.2, ease: 'easeIn' } }
 };
 
-export default function AuthModal({ isOpen, onClose }) {
-  const [isLogin, setIsLogin] = useState(true);
-  const { login } = useAuth();
-
-  const toggleMode = () => setIsLogin(!isLogin);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    login();
-    toast.success(isLogin ? "Welcome back! 🎉" : "Account created successfully! 👋");
-    onClose();
-  };
-
-  const InputField = ({ icon: Icon, type, label, id }) => (
+// Defined OUTSIDE the component to prevent re-creation on every render.
+// This is the fix for the focus-loss bug: React was unmounting and remounting
+// the input element each render because it saw a brand-new component definition.
+function InputField({ icon: Icon, type, label, id, value, onChange }) {
+  return (
     <div className="relative mb-5 group">
       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-400 dark:text-zinc-500 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors z-10">
         <Icon size={18} />
@@ -31,6 +23,8 @@ export default function AuthModal({ isOpen, onClose }) {
       <input
         type={type}
         id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         className="block w-full pl-12 pr-4 py-3.5 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/40 focus:border-indigo-500 dark:focus:border-indigo-500 transition-all peer"
         placeholder={label}
         required
@@ -43,6 +37,50 @@ export default function AuthModal({ isOpen, onClose }) {
       </label>
     </div>
   );
+}
+
+export default function AuthModal({ isOpen, onClose }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const { login, signup } = useAuth();
+  const navigate = useNavigate();
+
+  // Form state
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const toggleMode = () => {
+    setIsLogin(!isLogin);
+    setName('');
+    setEmail('');
+    setPassword('');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        await login(email, password);
+        toast.success("Welcome back! 🎉");
+      } else {
+        await signup(name, email, password);
+        toast.success("Account created successfully! 👋");
+      }
+      // Reset form and close modal on success
+      setName('');
+      setEmail('');
+      setPassword('');
+      onClose();
+      navigate('/');
+    } catch (error) {
+      toast.error(typeof error === 'string' ? error : (error?.message || 'Something went wrong'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -91,9 +129,9 @@ export default function AuthModal({ isOpen, onClose }) {
                   className="flex flex-col"
                   onSubmit={handleSubmit}
                 >
-                  {!isLogin && <InputField icon={UserIcon} type="text" id="name" label="Full Name" />}
-                  <InputField icon={Mail} type="email" id="email" label="Email Address" />
-                  <InputField icon={Lock} type="password" id="password" label="Password" />
+                  {!isLogin && <InputField icon={UserIcon} type="text" id="name" label="Full Name" value={name} onChange={setName} />}
+                  <InputField icon={Mail} type="email" id="email" label="College Email (.edu / .ac.in)" value={email} onChange={setEmail} />
+                  <InputField icon={Lock} type="password" id="password" label="Password" value={password} onChange={setPassword} />
 
                   {isLogin && (
                     <div className="flex justify-end mb-4 -mt-2">
@@ -105,9 +143,11 @@ export default function AuthModal({ isOpen, onClose }) {
 
                   <button
                     type="submit"
-                    className="w-full py-3.5 px-4 mt-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 font-bold rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
+                    disabled={loading}
+                    className="w-full py-3.5 px-4 mt-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 font-bold rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
                   >
-                    {isLogin ? 'Sign In' : 'Create Account'}
+                    {loading && <Loader2 size={18} className="animate-spin" />}
+                    {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
                   </button>
                 </motion.form>
               </AnimatePresence>

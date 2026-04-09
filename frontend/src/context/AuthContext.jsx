@@ -1,17 +1,70 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import API from '../api';
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const login = () => setIsAuthenticated(true);
-  const logout = () => setIsAuthenticated(false);
+  // Initialize auth state from local storage on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+
+    if (token && storedUser) {
+      setUser(JSON.parse(storedUser));
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  // Signup via API
+  const signup = async (name, college_email, password) => {
+    try {
+      const response = await API.post('/auth/signup', { name, college_email, password });
+      const { token, _id, role } = response.data;
+
+      localStorage.setItem('token', token);
+      const userData = { _id, name, college_email, role };
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      setUser(userData);
+      setIsAuthenticated(true);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || 'Signup failed';
+    }
+  };
+
+  // Login via API
+  const login = async (college_email, password) => {
+    try {
+      const response = await API.post('/auth/login', { college_email, password });
+      const { token, _id, name, role } = response.data;
+
+      localStorage.setItem('token', token);
+      const userData = { _id, name, college_email, role };
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      setUser(userData);
+      setIsAuthenticated(true);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || 'Login failed';
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    setIsAuthenticated(false);
+  };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import API from '../api';
 
 const categories = ['Coding', 'Design', 'Music', 'Languages', 'Fitness', 'Photography', 'Math', 'Writing', 'Finance', 'Other'];
 
@@ -22,6 +23,37 @@ const slideVariants = {
   })
 };
 
+const InputField = ({ label, id, value, onChange, placeholder }) => (
+  <div className="mb-5 relative">
+    <label className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">{label}</label>
+    <input
+      type="text"
+      id={id}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="block w-full px-4 py-3.5 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-base"
+      placeholder={placeholder}
+      required
+    />
+  </div>
+);
+
+const SelectField = ({ label, value, onChange }) => (
+  <div className="mb-5 relative">
+    <label className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">{label}</label>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="block w-full px-4 py-3.5 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all appearance-none text-base cursor-pointer"
+    >
+      {categories.map(c => <option key={c} value={c}>{c}</option>)}
+    </select>
+    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 pt-7 text-zinc-500">
+      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+    </div>
+  </div>
+);
+
 export default function CreateSwapModal({ isOpen, onClose }) {
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1);
@@ -40,41 +72,15 @@ export default function CreateSwapModal({ isOpen, onClose }) {
     setTimeout(() => { setStep(1); setFormData({ offerSkill: '', offerCategory: 'Coding', seekSkill: '', seekCategory: 'Design' }); }, 300); 
   };
 
-  const handlePost = () => {
-    toast.success("Skill swap posted successfully! 🚀");
-    handleClose();
+  const handlePost = async () => {
+    try {
+      await API.post('/swaps', formData);
+      toast.success("Skill swap posted successfully! 🚀");
+      handleClose();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to post swap");
+    }
   };
-
-  const InputField = ({ label, id, value, onChange, placeholder }) => (
-    <div className="mb-5 relative">
-      <label className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">{label}</label>
-      <input
-        type="text"
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="block w-full px-4 py-3.5 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-base"
-        placeholder={placeholder}
-        required
-      />
-    </div>
-  );
-
-  const SelectField = ({ label, value, onChange }) => (
-    <div className="mb-5 relative">
-      <label className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="block w-full px-4 py-3.5 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all appearance-none text-base cursor-pointer"
-      >
-        {categories.map(c => <option key={c} value={c}>{c}</option>)}
-      </select>
-      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 pt-7 text-zinc-500">
-        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-      </div>
-    </div>
-  );
 
   return (
     <AnimatePresence>
