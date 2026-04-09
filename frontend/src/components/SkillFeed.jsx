@@ -48,10 +48,22 @@ export default function SkillFeed({ searchQuery = '', activeCategory = 'All', so
   }, []);
 
   useEffect(() => {
-    let result = swaps.filter(swap => {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch = swap.offerSkill.toLowerCase().includes(query) || swap.seekSkill.toLowerCase().includes(query);
-      const matchesCategory = activeCategory === 'All' || swap.offerCategory === activeCategory || swap.seekCategory === activeCategory;
+    const query = searchQuery.trim().toLowerCase();
+
+    let result = swaps.filter((swap) => {
+      const offerSkill = (swap.offerSkill ?? '').toLowerCase();
+      const seekSkill = (swap.seekSkill ?? '').toLowerCase();
+      const offerCategory = swap.offerCategory ?? '';
+      const seekCategory = swap.seekCategory ?? '';
+
+      const matchesSearch =
+        query.length === 0 || offerSkill.includes(query) || seekSkill.includes(query);
+
+      const matchesCategory =
+        activeCategory === 'All' ||
+        offerCategory === activeCategory ||
+        seekCategory === activeCategory;
+
       return matchesSearch && matchesCategory;
     });
 
