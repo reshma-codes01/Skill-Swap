@@ -24,7 +24,7 @@ export default function Navbar({ onLoginClick, onCreateClick }) {
 
   // Dynamic user display
   const userName = user?.name || 'User';
-  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=6366f1&color=fff&size=100`;
+  const avatarUrl = user?.profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=6366f1&color=fff&size=100`;
   
   // Theme state
   const [isDark, setIsDark] = useState(() => {

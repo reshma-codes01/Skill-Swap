@@ -48,9 +48,20 @@ const userSchema = new mongoose.Schema({
     portfolio_links: {
         type: [String],
         default: []
-    }
+    },
+    savedSwaps: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Swap'
+    }]
 }, {
-    timestamps: true
+    timestamps: true,
+    toJSON: {
+        transform(doc, ret) {
+            delete ret.password;
+            delete ret.__v;
+            return ret;
+        }
+    }
 });
 
 // Hash password before saving

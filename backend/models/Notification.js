@@ -30,7 +30,8 @@ const notificationSchema = new mongoose.Schema({
         default: false
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    toJSON: { transform(doc, ret) { delete ret.__v; return ret; } }
 });
 
 const Notification = mongoose.model('Notification', notificationSchema);

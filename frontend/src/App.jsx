@@ -21,7 +21,7 @@ function AppContent() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen font-sans relative flex flex-col overflow-hidden transition-colors duration-300">
+    <div className="min-h-screen font-sans relative flex flex-col transition-colors duration-300">
       <Navbar 
         onLoginClick={() => setAuthOpen(true)} 
         onCreateClick={() => setCreateOpen(true)}
@@ -30,8 +30,8 @@ function AppContent() {
       <main className="flex-grow flex flex-col w-full relative z-10">
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<Home />} />
-            <Route path="/explore" element={<Explore />} />
+            <Route path="/" element={<Home onLoginClick={() => setAuthOpen(true)} />} />
+            <Route path="/explore" element={<Explore onLoginClick={() => setAuthOpen(true)} />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/:id" element={<PublicProfile />} />
             <Route path="/requests" element={<Requests />} />
@@ -41,7 +41,10 @@ function AppContent() {
         </AnimatePresence>
       </main>
 
-      <Footer />
+      <Footer 
+  onLoginClick={() => setAuthOpen(true)} 
+  onCreateClick={() => setCreateOpen(true)} 
+/>
       
       <AuthModal isOpen={isAuthOpen} onClose={() => setAuthOpen(false)} />
       <CreateSwapModal isOpen={isCreateOpen} onClose={() => setCreateOpen(false)} />

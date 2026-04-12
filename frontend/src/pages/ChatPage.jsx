@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, ArrowLeft, MoreVertical, ShieldCheck, Info } from 'lucide-react';
+import { Send, ArrowLeft, MoreVertical, ShieldCheck, Info, Check, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { socket } from '../socket';
 import { useAuth } from '../context/AuthContext';
@@ -32,9 +32,13 @@ const ChatPage = () => {
                 const userRes = await API.get(`/profiles/${otherUserId}`);
                 setOtherUser(userRes.data);
 
-                // Initialize Socket Connection
+                socket.auth = { token: localStorage.getItem('token') };
                 socket.connect();
                 socket.emit('join_room', chatRes.data._id);
+                
+                // Trigger Seen Hooks
+                API.put(`/chats/seen/${chatRes.data._id}`).catch(err => console.error(err));
+                socket.emit('mark_seen', chatRes.data._id);
             } catch (error) {
                 const msg = error.response?.data?.message || 'Unauthorized or failed to load chat';
                 toast.error(msg);
@@ -53,18 +57,35 @@ const ChatPage = () => {
         };
     }, [swapId, otherUserId]);
 
-    // 2. Listen for Incoming Messages
+    // 2. Listen for Incoming Messages & Status Updates
     useEffect(() => {
         const messageHandler = (newMessage) => {
             setMessages((prev) => [...prev, newMessage]);
+            
+            // Mark new incoming messages as seen immediately if we are active
+            if (newMessage.sender !== user?._id && chatId) {
+                socket.emit('mark_seen', chatId);
+                API.put(`/chats/seen/${chatId}`).catch(console.error);
+            }
+        };
+
+        const readHandler = ({ byUserId, chatId: receivedChatId }) => {
+            if (byUserId !== user?._id && receivedChatId === chatId) {
+                setMessages((prev) => prev.map(msg => ({
+                    ...msg,
+                    status: msg.sender === user?._id ? 'seen' : msg.status
+                })));
+            }
         };
 
         socket.on('receive_message', messageHandler);
+        socket.on('messages_read', readHandler);
 
         return () => {
             socket.off('receive_message', messageHandler);
+            socket.off('messages_read', readHandler);
         };
-    }, []);
+    }, [chatId, user?._id]);
 
     // 3. Auto-scroll Logic
     useEffect(() => {
@@ -77,7 +98,7 @@ const ChatPage = () => {
 
         const messageData = {
             chatId,
-            senderId: user._id,
+            senderId: user?._id,
             text: inputText.trim()
         };
 
@@ -146,7 +167,7 @@ const ChatPage = () => {
                     </div>
 
                     {messages.map((msg, index) => {
-                        const isMe = msg.sender === user._id;
+                        const isMe = msg.sender === user?._id;
                         return (
                             <motion.div
                                 key={index}
@@ -160,9 +181,16 @@ const ChatPage = () => {
                                     : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700 rounded-tl-none'
                                 }`}>
                                     <p className="text-[15px] leading-relaxed">{msg.text}</p>
-                                    <span className={`text-[9px] block mt-1 font-bold ${isMe ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
+                                    <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end text-zinc-400' : 'justify-start text-zinc-500'}`}>
+                                        <span className="text-[9px] font-bold block">
+                                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                        {isMe && (
+                                            msg.status === 'seen' 
+                                            ? <CheckCheck size={12} className="text-[#34B7F1]" />
+                                            : <Check size={12} className="text-zinc-400" />
+                                        )}
+                                    </div>
                                 </div>
                             </motion.div>
                         );

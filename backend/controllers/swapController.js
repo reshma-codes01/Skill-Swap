@@ -31,8 +31,22 @@ const createSwap = async (req, res) => {
 // @access  Public
 const getSwaps = async (req, res) => {
     try {
-        // Optionally populate 'postedBy' to get user details attached to swap requests
-        const swaps = await Swap.find().populate('postedBy', 'name college_email');
+        const { search } = req.query;
+        let query = {};
+
+        if (search && search.trim() !== '') {
+            // ✅ Escape regex special characters to prevent ReDoS
+            const sanitized = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            query = {
+                $or: [
+                    { title: { $regex: sanitized, $options: 'i' } },
+                    { offerSkill: { $regex: sanitized, $options: 'i' } },
+                    { seekSkill: { $regex: sanitized, $options: 'i' } }
+                ]
+            };
+        }
+
+        const swaps = await Swap.find(query).populate('postedBy', 'name');
         res.status(200).json(swaps);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -44,7 +58,7 @@ const getSwaps = async (req, res) => {
 // @access  Private
 const getUserSwaps = async (req, res) => {
     try {
-        const swaps = await Swap.find({ postedBy: req.user._id }).populate('postedBy', 'name college_email');
+        const swaps = await Swap.find({ postedBy: req.user._id }).populate('postedBy', 'name');
         res.status(200).json(swaps);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -76,7 +90,7 @@ const updateSwap = async (req, res) => {
         swap.status = status || swap.status;
 
         const updatedSwap = await swap.save();
-        const populated = await updatedSwap.populate('postedBy', 'name college_email');
+        const populated = await updatedSwap.populate('postedBy', 'name');
 
         res.status(200).json(populated);
     } catch (error) {

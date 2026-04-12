@@ -32,7 +32,8 @@ const swapSchema = new mongoose.Schema({
         default: 'Open'
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    toJSON: { transform(doc, ret) { delete ret.__v; return ret; } }
 });
 
 const Swap = mongoose.model('Swap', swapSchema);

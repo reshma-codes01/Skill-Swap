@@ -3,7 +3,7 @@ import SearchBar from '../components/SearchBar';
 import SkillFeed from '../components/SkillFeed';
 import PageWrapper from '../components/PageWrapper';
 
-export default function Explore() {
+export default function Explore({ onLoginClick }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortOrder, setSortOrder] = useState('newest');
@@ -23,6 +23,7 @@ export default function Explore() {
           searchQuery={searchQuery}
           activeCategory={activeCategory}
           sortOrder={sortOrder}
+          onLoginClick={onLoginClick}
         />
       </div>
     </PageWrapper>

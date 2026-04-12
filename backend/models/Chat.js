@@ -43,11 +43,17 @@ const chatSchema = new mongoose.Schema({
             timestamp: {
                 type: Date,
                 default: Date.now
+            },
+            status: {
+                type: String,
+                enum: ['sent', 'seen'],
+                default: 'sent'
             }
         }
     ]
 }, {
-    timestamps: true
+    timestamps: true,
+    toJSON: { transform(doc, ret) { delete ret.__v; return ret; } }
 });
 
 const Chat = mongoose.model('Chat', chatSchema);

@@ -31,8 +31,8 @@ const NotificationBell = () => {
         fetchNotifications();
 
         // 2. Socket Listeners
+        socket.auth = { token: localStorage.getItem('token') };
         socket.connect();
-        socket.emit('identify_user', user._id);
 
         const handleNewNotification = (notification) => {
             setNotifications(prev => [notification, ...prev]);

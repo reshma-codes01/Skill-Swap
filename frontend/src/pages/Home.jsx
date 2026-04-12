@@ -44,11 +44,11 @@ const features = [
   }
 ];
 
-export default function Home() {
+export default function Home({ onLoginClick }) {
   return (
     <PageWrapper>
       <div className="flex flex-col w-full">
-        <HeroSection />
+        <HeroSection onLoginClick={onLoginClick} />
         
         {/* Featured Section: Why Choose Us */}
         <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full relative z-10">

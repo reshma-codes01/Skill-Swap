@@ -1,12 +1,14 @@
 const User = require('../models/User');
+const Chat = require('../models/Chat');
 const generateToken = require('../utils/generateToken');
+
 
 // @desc    Register a new user
 // @route   POST /api/auth/signup
 // @access  Public
 const registerUser = async (req, res) => {
     try {
-        const { name, college_email, password, role } = req.body;
+        const { name, college_email, password } = req.body;
 
         // Validation
         if (!name || !college_email || !password) {
@@ -20,12 +22,11 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'User already exists with this college email' });
         }
 
-        // Create user
+        // Create user (role defaults to 'Student' via schema)
         const user = await User.create({
             name,
             college_email,
-            password,
-            role
+            password
         });
 
         if (user) {
@@ -81,7 +82,7 @@ const loginUser = async (req, res) => {
 // @access  Private
 const getUserProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user._id);
+        const user = await User.findById(req.user._id).select('-password -__v -savedSwaps');
 
         if (user) {
             res.json({
@@ -107,7 +108,7 @@ const getUserProfile = async (req, res) => {
 // @access  Private
 const updateUserProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user._id);
+        const user = await User.findById(req.user._id).select('-password -__v -savedSwaps');
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
@@ -152,10 +153,84 @@ const getPublicProfile = async (req, res) => {
     }
 };
 
+// @desc    Toggle save/unsave a swap
+// @route   POST /api/auth/save/:swapId
+// @access  Private
+const toggleSaveSwap = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select('savedSwaps');
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const swapId = req.params.swapId;
+        const index = user.savedSwaps.indexOf(swapId);
+
+        if (index > -1) {
+            // Unsave
+            user.savedSwaps.splice(index, 1);
+            await user.save();
+            res.json({ saved: false, savedSwaps: user.savedSwaps });
+        } else {
+            // Save
+            user.savedSwaps.push(swapId);
+            await user.save();
+            res.json({ saved: true, savedSwaps: user.savedSwaps });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get all saved swaps (populated)
+// @route   GET /api/auth/saved
+// @access  Private
+const getSavedSwaps = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).populate({
+            path: 'savedSwaps',
+            populate: { path: 'postedBy', select: 'name' }
+        });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        res.json(user.savedSwaps);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get connections (users with whom we share an active chat)
+// @route   GET /api/auth/connections
+// @access  Private
+const getConnections = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        // Find all chats where the current user is a participant
+        const chats = await Chat.find({ participants: userId })
+            .populate('participants', 'name bio');
+
+        // Extract unique other participants
+        const connectionMap = new Map();
+        chats.forEach(chat => {
+            chat.participants.forEach(p => {
+                if (p._id.toString() !== userId.toString() && !connectionMap.has(p._id.toString())) {
+                    connectionMap.set(p._id.toString(), p);
+                }
+            });
+        });
+
+        res.json(Array.from(connectionMap.values()));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
     getUserProfile,
     updateUserProfile,
-    getPublicProfile
+    getPublicProfile,
+    toggleSaveSwap,
+    getSavedSwaps,
+    getConnections
 };

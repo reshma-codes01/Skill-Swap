@@ -2,9 +2,13 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const http = require('http');
+const helmet = require('helmet');
+const { rateLimit } = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 const Chat = require('./models/Chat');
+const socketAuth = require('./middleware/socketAuth');
 
 // Routes Import
 const userRoutes = require('./routes/userRoutes');
@@ -27,44 +31,107 @@ const server = http.createServer(app);
 // CORS configuration
 const corsOptions = {
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true, 
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 };
 
-// Middleware
+// 1. Middleware Set 1: CORS MUST be before Helmet
 app.use(cors(corsOptions));
+
+// 2. Security Hardening
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } })); // Secure HTTP headers
+app.disable('x-powered-by'); // Mask tech stack
+
+// 2. Rate Limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 100, // Limit each IP to 100 requests per `window`
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: { message: 'Too many requests from this IP, please try again after 15 minutes' }
+});
+app.use('/api', limiter);
+
+// Remaining Middleware
 app.use(express.json()); // Parse JSON body
 app.use(express.urlencoded({ extended: true }));
+
+// Express 5.x workaround for express-mongo-sanitize (makes readonly properties writable)
+app.use((req, res, next) => {
+  ['body', 'params', 'query'].forEach(key => {
+    if (req[key]) {
+      Object.defineProperty(req, key, {
+        configurable: true,
+        enumerable: true,
+        writable: true,
+        value: req[key]
+      });
+    }
+  });
+  next();
+});
+
+app.use(mongoSanitize()); // Prevent NoSQL Injection after parsing
 
 // Socket.io Setup
 const io = new Server(server, {
     cors: corsOptions
 });
 
+// Apply Socket.io Authentication Middleware
+io.use(socketAuth);
+
 io.on('connection', (socket) => {
-    console.log('⚡ User connected:', socket.id);
+    console.log('⚡ User connected:', socket.id, 'User ID:', socket.userId);
+
+    // Auto-join personal notification room
+    socket.join(`user_${socket.userId}`);
+    console.log(`🔔 User ${socket.userId} auto-joined notification room`);
 
     // Join a specific chat room
-    socket.on('join_room', (chatId) => {
-        socket.join(chatId);
-        console.log(`👤 User joined chat room: ${chatId}`);
-    });
-
-    // Join a private user room for notifications
-    socket.on('identify_user', (userId) => {
-        socket.join(`user_${userId}`);
-        console.log(`🔔 User ${userId} identified for notifications`);
+    socket.on('join_room', async (chatId) => {
+        try {
+            const chat = await Chat.findById(chatId);
+            if (!chat) return;
+            
+            // Verify the authenticated user is a participant
+            const isParticipant = chat.participants.some(
+                p => p.toString() === socket.userId
+            );
+            
+            if (!isParticipant) {
+                socket.emit('error', { message: 'Not a participant of this chat' });
+                return;
+            }
+            
+            socket.join(chatId);
+            console.log(`👤 User ${socket.userId} joined chat room: ${chatId}`);
+        } catch (err) {
+            console.error('join_room error:', err);
+        }
     });
 
     // Send and save message
     socket.on('send_message', async (data) => {
-        const { chatId, senderId, text } = data;
+        const { chatId, text } = data;
+        const senderId = socket.userId; // USE THE VERIFIED IDENTITY
+        
+        if (!text || !text.trim()) return; // Prevent empty messages
         
         try {
             const chat = await Chat.findById(chatId);
             if (chat) {
+                // Verify sender is a participant
+                const isParticipant = chat.participants.some(
+                    p => p.toString() === senderId
+                );
+                if (!isParticipant) return;
+
                 const newMessage = {
                     sender: senderId,
-                    text,
+                    text: text.trim(),
+                    status: 'sent',
                     timestamp: new Date()
                 };
                 chat.messages.push(newMessage);
@@ -99,6 +166,33 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Mark messages as seen when a user opens the chat
+    socket.on('mark_seen', async (chatId) => {
+        try {
+            const chat = await Chat.findById(chatId);
+            if (!chat) return;
+
+            const isParticipant = chat.participants.some(p => p.toString() === socket.userId);
+            if (!isParticipant) return;
+
+            let updated = false;
+            chat.messages.forEach(msg => {
+                if (msg.sender.toString() !== socket.userId && msg.status !== 'seen') {
+                    msg.status = 'seen';
+                    updated = true;
+                }
+            });
+
+            if (updated) {
+                await chat.save();
+                // Emit event back to the room so sender UI updates
+                io.to(chatId).emit('messages_read', { byUserId: socket.userId, chatId });
+            }
+        } catch (error) {
+            console.error('Error marking seen:', error);
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('❌ User disconnected:', socket.id);
     });
@@ -123,9 +217,10 @@ app.set('socketio', io);
 // Error Handling Middleware
 app.use((err, req, res, next) => {
     const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+    const isProduction = process.env.NODE_ENV === 'production';
     res.status(statusCode).json({
-        message: err.message,
-        stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+        message: isProduction ? 'Internal Server Error' : err.message,
+        stack: isProduction ? undefined : err.stack,
     });
 });
 

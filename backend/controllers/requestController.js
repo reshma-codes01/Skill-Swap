@@ -72,7 +72,7 @@ const getReceivedRequests = async (req, res) => {
 
         // 2. Find requests only associated with the logged-in user's swapId list
         const requests = await SwapRequest.find({ swapId: { $in: swapIds } })
-            .populate('applicantId', 'name college_email')
+            .populate('applicantId', 'name')
             .populate('swapId', 'title');
 
         res.status(200).json(requests);
@@ -105,7 +105,14 @@ const updateRequestStatus = async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to update this request' });
         }
 
-        // 3. Update status
+        // ✅ 3. STATE MACHINE GUARD — only allow transitions from Pending
+        if (request.status !== 'Pending') {
+            return res.status(409).json({ 
+                message: `Cannot change status: request is already ${request.status}` 
+            });
+        }
+
+        // 4. Update status
         request.status = status;
         await request.save();
 
@@ -141,7 +148,7 @@ const getSentRequests = async (req, res) => {
             .populate('swapId', 'title offerSkill seekSkill postedBy')
             .populate({
                 path: 'swapId',
-                populate: { path: 'postedBy', select: 'name college_email' }
+                populate: { path: 'postedBy', select: 'name' }
             });
 
         res.status(200).json(requests);

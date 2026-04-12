@@ -60,7 +60,7 @@ const getMyChats = async (req, res) => {
         const chats = await Chat.find({
             participants: userId
         })
-        .populate('participants', 'name college_email') // Profile details for preview
+        .populate('participants', 'name') // Only public info for preview
         .populate('swapId', 'title') // Swap details for context
         .sort({ updatedAt: -1 }); // Most recent activity first
 
@@ -70,7 +70,45 @@ const getMyChats = async (req, res) => {
     }
 };
 
+// @desc    Mark all messages in a chat as seen
+// @route   PUT /api/chats/seen/:chatId
+// @access  Private
+const markMessagesAsSeen = async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        const currentUserId = req.user._id;
+
+        const chat = await Chat.findById(chatId);
+        if (!chat) {
+            return res.status(404).json({ message: 'Chat not found' });
+        }
+
+        // Verify participant
+        const isParticipant = chat.participants.some(p => p.toString() === currentUserId.toString());
+        if (!isParticipant) {
+            return res.status(403).json({ message: 'Not authorized for this chat' });
+        }
+
+        let updated = false;
+        chat.messages.forEach(msg => {
+            if (msg.sender.toString() !== currentUserId.toString() && msg.status !== 'seen') {
+                msg.status = 'seen';
+                updated = true;
+            }
+        });
+
+        if (updated) {
+            await chat.save();
+        }
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getChatHistory,
-    getMyChats
+    getMyChats,
+    markMessagesAsSeen
 };

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { createSwap, getSwaps, getUserSwaps, updateSwap, deleteSwap } = require('../controllers/swapController');
 const { protect } = require('../middleware/authMiddleware');
+const validateObjectId = require('../middleware/validateObjectId');
 
 // @route   GET /api/swaps
 router.get('/', getSwaps);
@@ -13,10 +14,10 @@ router.post('/', protect, createSwap);
 router.get('/me', protect, getUserSwaps);
 
 // @route   PUT /api/swaps/:id
-router.put('/:id', protect, updateSwap);
+router.put('/:id', protect, validateObjectId(), updateSwap);
 
 // @route   DELETE /api/swaps/:id
-router.delete('/:id', protect, deleteSwap);
+router.delete('/:id', protect, validateObjectId(), deleteSwap);
 
 module.exports = router;
 

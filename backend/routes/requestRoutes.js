@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { applyForSwap, getReceivedRequests, updateRequestStatus, getSentRequests } = require('../controllers/requestController');
 const { protect } = require('../middleware/authMiddleware');
+const validateObjectId = require('../middleware/validateObjectId');
 
 // All routes are protected
 router.use(protect);
@@ -16,6 +17,6 @@ router.get('/received', getReceivedRequests);
 router.get('/sent', getSentRequests);
 
 // @route   PUT /api/requests/:id/status
-router.put('/:id/status', updateRequestStatus);
+router.put('/:id/status', validateObjectId(), updateRequestStatus);
 
 module.exports = router;

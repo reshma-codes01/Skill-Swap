@@ -25,7 +25,8 @@ const swapRequestSchema = new mongoose.Schema({
         default: 'Pending'
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    toJSON: { transform(doc, ret) { delete ret.__v; return ret; } }
 });
 
 const SwapRequest = mongoose.model('SwapRequest', swapRequestSchema);
