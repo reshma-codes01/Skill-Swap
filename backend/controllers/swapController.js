@@ -5,13 +5,14 @@ const Swap = require('../models/Swap');
 // @access  Private
 const createSwap = async (req, res) => {
     try {
-        const { offerSkill, offerCategory, seekSkill, seekCategory } = req.body;
+        const { title, offerSkill, offerCategory, seekSkill, seekCategory } = req.body;
 
-        if (!offerSkill || !seekSkill) {
-            return res.status(400).json({ message: 'Please provide both offerSkill and seekSkill' });
+        if (!title || !offerSkill || !seekSkill) {
+            return res.status(400).json({ message: 'Please provide title, offerSkill, and seekSkill' });
         }
 
         const swap = await Swap.create({
+            title,
             offerSkill,
             offerCategory,
             seekSkill,

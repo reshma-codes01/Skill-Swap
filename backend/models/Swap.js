@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const swapSchema = new mongoose.Schema({
+    title: {
+        type: String,
+        required: [true, 'Please add a title for your swap']
+    },
     offerSkill: {
         type: String,
         required: [true, 'Please add a skill you offer']

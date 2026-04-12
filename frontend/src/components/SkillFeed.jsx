@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRightLeft, Star, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import API from '../api';
+import ApplySwapModal from './ApplySwapModal';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -28,16 +31,22 @@ const timeAgo = (dateStr) => {
 };
 
 export default function SkillFeed({ searchQuery = '', activeCategory = 'All', sortOrder = 'newest' }) {
+  const { user } = useAuth();
   const [swaps, setSwaps] = useState([]);
-  const [filteredSwaps, setFilteredSwaps] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [selectedSwapId, setSelectedSwapId] = useState(null);
+
+  const handleApplyClick = (swapId) => {
+    setSelectedSwapId(swapId);
+    setIsApplyModalOpen(true);
+  };
 
   useEffect(() => {
     const fetchSwaps = async () => {
       try {
         const { data } = await API.get('/swaps');
         setSwaps(data);
-        setFilteredSwaps(data);
       } catch (error) {
         console.error("Failed to fetch swaps:", error);
       } finally {
@@ -47,10 +56,10 @@ export default function SkillFeed({ searchQuery = '', activeCategory = 'All', so
     fetchSwaps();
   }, []);
 
-  useEffect(() => {
+  const visibleSwaps = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    let result = swaps.filter((swap) => {
+    const filtered = swaps.filter((swap) => {
       const offerSkill = (swap.offerSkill ?? '').toLowerCase();
       const seekSkill = (swap.seekSkill ?? '').toLowerCase();
       const offerCategory = swap.offerCategory ?? '';
@@ -67,13 +76,11 @@ export default function SkillFeed({ searchQuery = '', activeCategory = 'All', so
       return matchesSearch && matchesCategory;
     });
 
-    result = result.sort((a, b) => {
+    return filtered.toSorted((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
       return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
     });
-
-    setFilteredSwaps(result);
   }, [swaps, searchQuery, activeCategory, sortOrder]);
 
   return (
@@ -117,7 +124,7 @@ export default function SkillFeed({ searchQuery = '', activeCategory = 'All', so
             </div>
           ))}
         </div>
-      ) : filteredSwaps.length === 0 ? (
+      ) : visibleSwaps.length === 0 ? (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           className="flex flex-col justify-center py-20 items-center text-zinc-500"
@@ -136,9 +143,15 @@ export default function SkillFeed({ searchQuery = '', activeCategory = 'All', so
           viewport={{ once: true, margin: "-50px" }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {filteredSwaps.map((swap, index) => (
-            <motion.div
-              key={swap._id}
+          {visibleSwaps.map((swap, index) => {
+            const isOwner = user && String(swap.postedBy?._id || swap.postedBy) === String(user._id);
+            
+            // Debugging log for identity mismatch surgery
+            console.log(`[Identity Check] SwapID: ${swap._id} | Owner: ${swap.postedBy?._id || swap.postedBy} | CurrentUser: ${user?._id} | isOwner: ${isOwner}`);
+
+            return (
+              <motion.div
+                key={swap._id}
               variants={itemVariants}
               whileHover={{ y: -5 }}
               className="group relative bg-white/70 dark:bg-zinc-900 backdrop-blur-md border border-white/60 dark:border-zinc-800/80 rounded-3xl p-6 shadow-xl shadow-indigo-500/5 dark:shadow-none hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 flex flex-col justify-between"
@@ -157,6 +170,11 @@ export default function SkillFeed({ searchQuery = '', activeCategory = 'All', so
                       <span className="flex items-center gap-1 font-medium"><Clock size={12} /> {timeAgo(swap.createdAt)}</span>
                     </div>
                   </div>
+                  {isOwner && (
+                    <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold rounded-full border border-indigo-500/20">
+                      Your Post
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -181,17 +199,38 @@ export default function SkillFeed({ searchQuery = '', activeCategory = 'All', so
 
               {/* Card Action */}
               <div className="mt-6 pt-4 border-t border-zinc-200/50 dark:border-zinc-800 flex justify-between items-center">
-                <button className="text-xs font-semibold text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                <Link 
+                  to={`/profile/${swap.postedBy?._id}`}
+                  className="text-xs font-semibold text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                >
                   View Profile
-                </button>
-                <button className="px-5 py-2.5 text-xs font-bold rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 transition-opacity shadow-md">
-                  Swap Skills
-                </button>
+                </Link>
+                {isOwner ? (
+                  <button 
+                    disabled
+                    className="px-5 py-2.5 text-xs font-bold rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed shadow-sm"
+                  >
+                    Your Gig
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => handleApplyClick(swap._id)}
+                    className="px-5 py-2.5 text-xs font-bold rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 transition-opacity shadow-md"
+                  >
+                    Swap Skills
+                  </button>
+                )}
               </div>
             </motion.div>
-          ))}
+          );})}
         </motion.div>
       )}
+
+      <ApplySwapModal 
+        isOpen={isApplyModalOpen} 
+        onClose={() => setIsApplyModalOpen(false)} 
+        swapId={selectedSwapId} 
+      />
     </section>
   );
 }

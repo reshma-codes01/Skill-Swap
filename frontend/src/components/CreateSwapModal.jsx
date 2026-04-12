@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react';
+import { useEffect } from 'react';
 import { toast } from 'sonner';
 import API from '../api';
 
@@ -57,7 +58,19 @@ const SelectField = ({ label, value, onChange }) => (
 export default function CreateSwapModal({ isOpen, onClose }) {
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1);
+  
+  // Prevent background scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [isOpen]);
+
   const [formData, setFormData] = useState({
+    title: '',
     offerSkill: '',
     offerCategory: 'Coding',
     seekSkill: '',
@@ -69,12 +82,33 @@ export default function CreateSwapModal({ isOpen, onClose }) {
 
   const handleClose = () => {
     onClose();
-    setTimeout(() => { setStep(1); setFormData({ offerSkill: '', offerCategory: 'Coding', seekSkill: '', seekCategory: 'Design' }); }, 300); 
+    setTimeout(() => { 
+      setStep(1); 
+      setFormData({ 
+        title: '',
+        offerSkill: '', 
+        offerCategory: 'Coding', 
+        seekSkill: '', 
+        seekCategory: 'Design' 
+      }); 
+    }, 300); 
   };
 
   const handlePost = async () => {
+    if (!formData.title.trim()) {
+      return toast.error("Please enter a Gig Title");
+    }
+
     try {
-      await API.post('/swaps', formData);
+      const payload = {
+        title: formData.title.trim(),
+        offerSkill: formData.offerSkill.trim(),
+        offerCategory: formData.offerCategory,
+        seekSkill: formData.seekSkill.trim(),
+        seekCategory: formData.seekCategory
+      };
+
+      await API.post('/swaps', payload);
       toast.success("Skill swap posted successfully! 🚀");
       handleClose();
     } catch (error) {
@@ -99,7 +133,7 @@ export default function CreateSwapModal({ isOpen, onClose }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-lg bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl border border-white/60 dark:border-zinc-800 shadow-2xl shadow-indigo-500/10 dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col"
+            className="relative w-full max-w-lg bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl border border-white/60 dark:border-zinc-800 shadow-2xl shadow-indigo-500/10 dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[90vh]"
           >
             {/* Header & Progress */}
             <div className="px-8 pt-8 pb-4 relative border-b border-zinc-100 dark:border-zinc-800/80">
@@ -130,7 +164,7 @@ export default function CreateSwapModal({ isOpen, onClose }) {
             </div>
 
             {/* Content Area */}
-            <div className="relative overflow-hidden min-h-[320px] flex">
+            <div className="relative overflow-y-auto min-h-[320px] flex-1 custom-scrollbar">
               <AnimatePresence initial={false} custom={direction}>
                 {step === 1 && (
                   <motion.div
@@ -144,6 +178,13 @@ export default function CreateSwapModal({ isOpen, onClose }) {
                     className="absolute inset-0 px-8 py-6 w-full h-full"
                   >
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-6">What are you offering?</h3>
+                    <InputField 
+                      label="Gig Title" 
+                      id="title" 
+                      placeholder="e.g. Logo Design for Web App"
+                      value={formData.title}
+                      onChange={(val) => setFormData({...formData, title: val})}
+                    />
                     <InputField 
                       label="Skill Name" 
                       id="offerSkill" 
@@ -160,7 +201,7 @@ export default function CreateSwapModal({ isOpen, onClose }) {
                     <div className="absolute bottom-6 left-8 right-8 flex justify-end">
                       <button
                         onClick={nextStep}
-                        disabled={!formData.offerSkill}
+                        disabled={!formData.offerSkill || !formData.title}
                         className="flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 font-bold rounded-xl shadow-md transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed outline-none focus:ring-2 focus:ring-indigo-500"
                       >
                         Next <ArrowRight size={18} />

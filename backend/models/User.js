@@ -36,6 +36,18 @@ const userSchema = new mongoose.Schema({
     location: {
         type: String,
         default: ''
+    },
+    skills_offered: {
+        type: [String],
+        default: []
+    },
+    skills_needed: {
+        type: [String],
+        default: []
+    },
+    portfolio_links: {
+        type: [String],
+        default: []
     }
 }, {
     timestamps: true

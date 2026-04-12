@@ -10,6 +10,10 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import Explore from './pages/Explore';
 import Profile from './pages/Profile';
+import PublicProfile from './pages/PublicProfile';
+import Requests from './pages/Requests';
+import ChatPage from './pages/ChatPage';
+import Inbox from './pages/Inbox';
 
 function AppContent() {
   const [isAuthOpen, setAuthOpen] = useState(false);
@@ -29,6 +33,10 @@ function AppContent() {
             <Route path="/" element={<Home />} />
             <Route path="/explore" element={<Explore />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:id" element={<PublicProfile />} />
+            <Route path="/requests" element={<Requests />} />
+            <Route path="/inbox" element={<Inbox />} />
+            <Route path="/chat/:swapId/:otherUserId" element={<ChatPage />} />
           </Routes>
         </AnimatePresence>
       </main>

@@ -135,9 +135,27 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
+// @desc    Get public profile of any user by ID
+// @route   GET /api/profiles/:id
+// @access  Public
+const getPublicProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('name bio location skills_offered skills_needed portfolio_links createdAt');
+
+        if (user) {
+            res.json(user);
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
     getUserProfile,
-    updateUserProfile
+    updateUserProfile,
+    getPublicProfile
 };

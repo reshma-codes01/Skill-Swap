@@ -3,10 +3,13 @@ import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Zap, Sun, Moon, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import NotificationBell from './NotificationBell';
 
 const navLinks = [
   { name: 'Home', href: '/' },
   { name: 'Explore', href: '/explore' },
+  { name: 'Inbox', href: '/inbox', protected: true },
+  { name: 'Requests', href: '/requests', protected: true },
 ];
 
 export default function Navbar({ onLoginClick, onCreateClick }) {
@@ -66,7 +69,7 @@ export default function Navbar({ onLoginClick, onCreateClick }) {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-6 relative">
-            {navLinks.map((link) => (
+            {navLinks.filter(link => !link.protected || isAuthenticated).map((link) => (
               <NavLink
                 key={link.name}
                 to={link.href}
@@ -86,6 +89,9 @@ export default function Navbar({ onLoginClick, onCreateClick }) {
 
             {isAuthenticated ? (
               <>
+                <div className="mr-2">
+                  <NotificationBell />
+                </div>
                 <motion.button
                   onClick={onCreateClick}
                   whileHover={{ scale: 1.05 }}
@@ -122,8 +128,9 @@ export default function Navbar({ onLoginClick, onCreateClick }) {
 
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center gap-4">
+            {isAuthenticated && <NotificationBell />}
             <button
-              onClick={() => setIsDark(!isDark)}
+               onClick={() => setIsDark(!isDark)}
               className="p-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors focus:outline-none"
             >
               {isDark ? <Sun size={20} /> : <Moon size={20} />}
@@ -149,7 +156,7 @@ export default function Navbar({ onLoginClick, onCreateClick }) {
             className="md:hidden border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 overflow-hidden shadow-xl"
           >
             <div className="px-4 pt-2 pb-4 space-y-1">
-              {navLinks.map((link) => (
+              {navLinks.filter(link => !link.protected || isAuthenticated).map((link) => (
                 <NavLink
                   key={link.name}
                   to={link.href}

@@ -57,10 +57,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // 1. Wipe tokens and user data
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    
+    // 2. Reset local state
     setUser(null);
     setIsAuthenticated(false);
+    
+    // 3. Forcefully remove Authorization header from Axios
+    delete API.defaults.headers.common['Authorization'];
+    
+    // 4. Hard redirect to the home page to destroy any remaining component state
+    window.location.href = '/';
   };
 
   return (
