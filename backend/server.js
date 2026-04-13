@@ -41,7 +41,7 @@ const corsOptions = {
 
 // 1. Middleware Set 1: CORS MUST be before Helmet
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 // 2. Security Hardening
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } })); // Secure HTTP headers
