@@ -47,6 +47,8 @@ app.options(/.*/, cors(corsOptions));
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } })); // Secure HTTP headers
 app.disable('x-powered-by'); // Mask tech stack
 
+app.set('trust proxy', 1);
+
 // 2. Rate Limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
